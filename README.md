@@ -8,7 +8,7 @@ modulo-4-evaluacion-final-bpw-Patri-GL has been created as a final test for modu
 
 ## Backlog
 
-- [Proyect](https://github.com/orgs/Adalab/projects/537/views/1)
+- [Project](https://github.com/orgs/Adalab/projects/537/views/1)
 
 ## License
 MIT License
