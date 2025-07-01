@@ -76,8 +76,6 @@ server.get("/api/simpsonsquotes", async (req, res) => {
     });
   } catch (error) {
     console.error("Database error:", error);
-    // Ensure connection is released even if error occurs
-    if (connection) connection.release();
     res.status(500).json({
       success: false,
       error: "Failed to fetch quotes from the database.",
@@ -123,18 +121,54 @@ server.post("/api/simpsonsquotes", async (req, res) => {
       [result.insertId]
     );
 
-    // 4. Send the data as JSON
+    // 5. Send the data as JSON
     res.status(201).json({
       success: true,
       data: newQuote[0],
     });
+    // 6. Close connection
+    await connection.end();
   } catch (error) {
     console.error("Database error:", error);
-    // Ensure connection is released even if error occurs
-    if (connection) connection.release();
     res.status(500).json({
       success: false,
       error: "Failed to fetch quotes from the database.",
+    });
+  }
+});
+
+server.get("/simpsonsquotes/:id", async (req, res) => {
+  let connection;
+  try {
+    // 1. Get a connection
+    const connection = await getConnection();
+
+    // 2. Execute a query
+    const [results] = await connection.query(
+      `SELECT q.*, c.name AS character_name 
+      FROM quotes q
+      JOIN characters c ON q.characters_id = c.id
+      WHERE q.id = ?`,
+      [req.params.id]
+    );
+    // 3. What happens when the quote does not exist
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Quote not found",
+      });
+    }
+
+    // 4. Send the data as JSON
+    res.json({
+      success: true,
+      data: results[0],
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch quote from the database.",
     });
   }
   // 5. Close connection
