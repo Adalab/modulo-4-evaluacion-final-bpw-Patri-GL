@@ -174,6 +174,99 @@ server.get("/simpsonsquotes/:id", async (req, res) => {
   // 5. Close connection
   await connection.end();
 });
+
+server.put("/simpsonsquotes/:id", async (req, res) => {
+  let connection;
+  try {
+    // 1. Validate input
+    const quoteId = parseInt(req.params.id);
+    if (isNaN(quoteId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid quote ID format",
+      });
+    }
+    const { text, mark_time, description, characters_id } = req.body;
+    if (!text && !mark_time && !description && !characters_id) {
+      return res.status(400).json({
+        success: false,
+        error: "At least one field must be provided for update",
+      });
+    }
+    // 2. Get a connection
+    const connection = await getConnection();
+
+    // 3. Verify quote exists
+    const [existingQuote] = await connection.query(
+      "SELECT id FROM quotes WHERE id = ?",
+      [quoteId]
+    );
+    if (existingQuote.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Quote not found",
+      });
+    }
+    // 4. Verify character exists (if updating characters_id)
+    if (characters_id) {
+      const [character] = await connection.query(
+        "SELECT id FROM characters WHERE id = ?",
+        [characters_id]
+      );
+      if (character.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Character not found",
+        });
+      }
+    }
+    // 5. Build dynamic update query
+    const updateFields = [];
+    const queryParams = [];
+
+    if (text) {
+      updateFields.push("text = ?");
+      queryParams.push(text);
+    }
+    if (mark_time) {
+      updateFields.push("mark_time = ?");
+      queryParams.push(mark_time);
+    }
+    if (description) {
+      updateFields.push("description = ?");
+      queryParams.push(description);
+    }
+    if (characters_id) {
+      updateFields.push("characters_id = ?");
+      queryParams.push(characters_id);
+    }
+
+    queryParams.push(quoteId);
+
+    // 6. Execute update
+    const [result] = await connection.query(
+      `UPDATE quotes SET ${updateFields.join(", ")} WHERE id = ?`,
+      queryParams
+    );
+    // 7. Fetch updated quote
+    const [updatedQuote] = await connection.query(
+      "SELECT * FROM quotes WHERE id = ?",
+      [quoteId]
+    );
+    res.json({
+      success: true,
+      data: updatedQuote[0],
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update quote",
+    });
+  }
+  // 8. Close connection
+  await connection.end();
+});
 // SERVIDOR DE FICHEROS ESTÁTICOS
 
 // server.use(express.static(path.join(__dirname, "../FRONTEND")));
