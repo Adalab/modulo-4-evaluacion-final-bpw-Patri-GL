@@ -404,10 +404,76 @@ server.get("/api/simpsonscharacters/:id/quotes", async (req, res) => {
      q.id,
      q.text,
      q.mark_time,
-     q.description
+     q.description,
+     c.name,
+     c.surname
    FROM quotes q
+   JOIN characters c ON q.characters_id = c.id
    WHERE q.characters_id = ?`,
       [characterId]
+    );
+    // 5. Close connection
+    await connection.end();
+    // 6. Send the data as JSON
+    res.json({
+      success: true,
+      data: quotes,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch characters from the database.",
+    });
+  }
+});
+
+server.get("/api/simpsonsquotes/:id/episodes", async (req, res) => {
+  let connection;
+  try {
+    // 1. Validate episode ID
+    const episodeId = parseInt(req.params.id);
+    if (isNaN(episodeId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid episode ID format",
+      });
+    }
+    // 2. Get a connection
+    const connection = await getConnection();
+
+    // 3. Verify character exists
+    const [episode] = await connection.query(
+      "SELECT id FROM episodes WHERE id = ?",
+      [episodeId]
+    );
+    if (episode.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Episode not found",
+      });
+    }
+
+    // 4. Fetch quotes
+    const [quotes] = await connection.query(
+      `SELECT 
+        q.id AS quote_id,
+        q.text AS quote_text,
+        q.mark_time,
+        q.description,
+        c.id AS character_id,
+        c.name AS character_name,
+        c.surname AS character_surname,
+        c.job AS character_job
+      FROM 
+        episodes_has_characters ec
+      JOIN 
+        quotes q ON ec.characters_id = q.characters_id
+      JOIN 
+        characters c ON q.characters_id = c.id
+      WHERE 
+        ec.episodes_id = ?`,
+      [episodeId]
     );
     // 5. Close connection
     await connection.end();
