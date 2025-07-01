@@ -47,25 +47,25 @@ server.get("/api/simpsonsquotes", async (req, res) => {
     const [rows] = await connection.query(`
       SELECT 
         q.id AS quote_id, 
-        q.text AS quote_text, 
-        q.description AS quote_description, 
-        c.id AS character_id, 
-        c.name AS character_name, 
-        c.surname AS character_surname, 
-        c.job AS character_job, 
-        e.id AS episode_id, 
-        e.title AS episode_title, 
-        e.season, 
-        e.episode_number, 
-        e.emission_date  
-      FROM 
-        quotes q 
-      JOIN 
-        characters c ON q.characters_id = c.id 
-      JOIN 
-        episodes_has_characters ec ON c.id = ec.characters_id 
-      JOIN 
-      episodes e ON ec.episodes_id = e.id
+        q.text AS quote_text,
+        q.description AS quote_description,
+        c.id AS character_id,
+        c.name AS character_name,
+        c.surname AS character_surname,
+        c.job AS character_job,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'episode_id', e.id,
+            'title', e.title,
+            'season', e.season,
+            'episode_number', e.episode_number
+          )
+        ) AS episodes
+      FROM quotes q
+      JOIN characters c ON q.characters_id = c.id
+      LEFT JOIN episodes_has_characters ec ON c.id = ec.characters_id
+      LEFT JOIN episodes e ON ec.episodes_id = e.id
+      GROUP BY q.id
     `);
     // 3. Close connection
     await connection.end();
@@ -316,6 +316,113 @@ server.delete("/simpsonsquotes/:id", async (req, res) => {
   }
   // 8. Close connection
   await connection.end();
+});
+
+server.get("/api/simpsonscharacters", async (req, res) => {
+  let connection;
+  try {
+    // 1. Get a connection
+    const connection = await getConnection();
+
+    // 2. Execute a query
+    const [rows] = await connection.query(`
+      SELECT * FROM
+        characters 
+    `);
+    // 3. Close connection
+    await connection.end();
+    // 4. Send the data as JSON
+    res.json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch characters from the database.",
+    });
+  }
+});
+
+server.get("/api/simpsonsepisodes", async (req, res) => {
+  let connection;
+  try {
+    // 1. Get a connection
+    const connection = await getConnection();
+
+    // 2. Execute a query
+    const [rows] = await connection.query(`
+      SELECT * FROM
+        episodes 
+    `);
+    // 3. Close connection
+    await connection.end();
+    // 4. Send the data as JSON
+    res.json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch characters from the database.",
+    });
+  }
+});
+
+server.get("/api/simpsonscharacters/:id/quotes", async (req, res) => {
+  let connection;
+  try {
+    // 1. Validate character ID
+    const characterId = parseInt(req.params.id);
+    if (isNaN(characterId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid character ID format",
+      });
+    }
+    // 2. Get a connection
+    const connection = await getConnection();
+
+    // 3. Verify character exists
+    const [character] = await connection.query(
+      "SELECT id FROM characters WHERE id = ?",
+      [characterId]
+    );
+    if (character.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Character not found",
+      });
+    }
+
+    // 4. Fetch quotes
+    const [quotes] = await connection.query(
+      `SELECT
+     q.id,
+     q.text,
+     q.mark_time,
+     q.description
+   FROM quotes q
+   WHERE q.characters_id = ?`,
+      [characterId]
+    );
+    // 5. Close connection
+    await connection.end();
+    // 6. Send the data as JSON
+    res.json({
+      success: true,
+      data: quotes,
+    });
+  } catch (error) {
+    console.error("Database error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch characters from the database.",
+    });
+  }
 });
 // SERVIDOR DE FICHEROS ESTÁTICOS
 
