@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "build": "npm install",
+    "dev": "node --watch src/index.js",
+    "deploy": "rm -rf docs ; npm run build ; mv dist docs ; git add docs ; git commit -m 'Update GH Pages version' ; git push"
   },
   "repository": {
     "type": "git",
@@ -29,5 +31,8 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "mysql2": "^3.14.1"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
