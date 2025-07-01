@@ -88,17 +88,45 @@ server.get("/api/simpsonsquotes", async (req, res) => {
 server.post("/api/simpsonsquotes", async (req, res) => {
   let connection;
   try {
-    // 1. Get a connection
+    // 1. Validate incoming data
+    const { text, description, characters_id } = req.body;
+
+    if (!text || !characters_id) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: text and characters_id",
+      });
+    }
+    // 2. Get a connection
     const connection = await getConnection();
 
-    // 2. Execute a query
+    // 3. Verify the character exists
+    const [character] = await connection.query(
+      "SELECT id FROM characters WHERE id = ?",
+      [characters_id]
+    );
 
-    // 3. Close connection
-    await connection.end();
+    if (character.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Character not found",
+      });
+    }
+
+    // 4. Insert the new quote
+    const [result] = await connection.query(
+      "INSERT INTO quotes (text, description, characters_id) VALUES (?, ?, ?)",
+      [text, description, characters_id]
+    );
+    const [newQuote] = await connection.query(
+      "SELECT * FROM quotes WHERE id = ?",
+      [result.insertId]
+    );
+
     // 4. Send the data as JSON
-    res.json({
+    res.status(201).json({
       success: true,
-      data: rows,
+      data: newQuote[0],
     });
   } catch (error) {
     console.error("Database error:", error);
@@ -109,6 +137,8 @@ server.post("/api/simpsonsquotes", async (req, res) => {
       error: "Failed to fetch quotes from the database.",
     });
   }
+  // 5. Close connection
+  await connection.end();
 });
 // SERVIDOR DE FICHEROS ESTÁTICOS
 
