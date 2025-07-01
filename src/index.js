@@ -1,9 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
+
 const mysql = require("mysql2/promise");
 require("dotenv").config();
-
 // Server Variable
 const server = express();
 
@@ -18,7 +17,16 @@ server.listen(port, () => {
 });
 
 server.get("/", (req, res) => {
-  res.send("API is running! Try /api/simpsonsquotes");
+  const deploymentInfo = {
+    status: "API is running. Try /api/simpsonsquotes",
+    version: "1.0.0",
+    live_url: `process.env.RENDER_EXTERNAL_URL || "http://localhost:${port}"`,
+    documentation: `${
+      process.env.RENDER_EXTERNAL_URL || "http://localhost:4000"
+    }/docs`,
+    uptime: process.uptime(),
+  };
+  res.json(deploymentInfo);
 });
 
 // Database Connection
