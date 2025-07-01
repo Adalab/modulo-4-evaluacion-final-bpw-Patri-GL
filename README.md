@@ -10,9 +10,9 @@ modulo-4-evaluacion-final-bpw-Patri-GL has been created as a final test for modu
 
 - [Project](https://github.com/orgs/Adalab/projects/537/views/1)
 
-## Render
+<!-- ## Render
 
-- [Server Address](https://modulo-4-evaluacion-final-bpw-patri-gl.onrender.com/)
+- [Server Address](https://modulo-4-evaluacion-final-bpw-patri-gl.onrender.com/) -->
 
 ## License
 
